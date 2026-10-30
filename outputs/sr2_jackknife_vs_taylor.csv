@@ -1,0 +1,3 @@
+"cohort","model","taylor_se","jackknife_se","ratio_jk_over_taylor","jackknife_reps_used","psu_total"
+"NHANES","CMM3+COV",0.0707907585406962,0.0800314578862759,1.130535391004,62,62
+"NHIS","CMM3+COV",0.0297767499276763,0.0299205679667247,1.00482987698113,659,659

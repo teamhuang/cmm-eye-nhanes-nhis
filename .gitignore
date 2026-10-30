@@ -1,0 +1,11 @@
+# raw survey data (download from CDC/NCHS; not redistributed)
+data/
+*.xpt
+*.XPT
+*.zip
+# build artefacts
+docx_build/
+__pycache__/
+.Rhistory
+.RData
+.DS_Store

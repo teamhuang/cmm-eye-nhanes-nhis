@@ -1,0 +1,7 @@
+"step","n"
+"age>=40 examined (full file)",7081
+"valid cataract surgery",7074
+"+ valid AMD",7005
+"+ complete CMM4",5773
+"+ complete CRP",5770
+"+ complete covariates (educ/pir/smoke)",5366

@@ -1,0 +1,5 @@
+"cohort","outcome","p_nonlinearity"
+"NHANES","cataract",0.203232349511104
+"NHANES","amd",0.633806878902198
+"NHIS","cataract",0.00168769314580443
+"NHIS","amd",0.790100240545463

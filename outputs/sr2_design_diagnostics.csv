@@ -1,0 +1,3 @@
+"cohort","n","n_strata","n_psu","design_df","strata_with_1_psu","strata_with_ge2_psu","min_psu_per_strata"
+"NHANES",5366,31,62,31,0,31,2
+"NHIS",17613,52,659,607,0,52,3
