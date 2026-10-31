@@ -1,11 +1,9 @@
-"""Nature-style figures, rebuilt from the verified CSVs. Rules:
-- height 5 cm; width 6.5 cm (multi-panel) or 5 cm (single column).
-- no in-figure title, no explanatory notes; only axes, tick labels, panel letters and legends.
-- Helvetica/Arial, 5.5-7 pt, thin lines, left/bottom spines, colour-blind-safe muted palette.
+"""Nature-style figures: each panel is a 4 x 4 cm forest plot with OR (95% CI) and P
+printed to its right; panels are assembled (Figures 1-2 side by side, Figure 3 2+1).
+No in-figure notes beyond panel names/letters.
 """
 import matplotlib; matplotlib.use("Agg")
-import matplotlib.pyplot as plt, pandas as pd, numpy as np, os
-from matplotlib.patches import Patch
+import matplotlib.pyplot as plt, matplotlib.transforms as mtrans, pandas as pd, numpy as np, os
 from matplotlib.ticker import ScalarFormatter, NullFormatter
 
 OUT = r"H:\眼科论文\眼科2\analysis\output"; FIG = r"H:\眼科论文\眼科2\figures"
@@ -13,137 +11,146 @@ os.makedirs(FIG, exist_ok=True)
 CM = 1/2.54
 plt.rcParams.update({
     "font.family":"sans-serif", "font.sans-serif":["Arial","Helvetica","DejaVu Sans"],
-    "font.size":5.2, "axes.labelsize":5.5, "axes.titlesize":5.8, "xtick.labelsize":5.0,
-    "ytick.labelsize":5.0, "legend.fontsize":4.8, "axes.linewidth":0.5,
-    "xtick.major.width":0.5, "ytick.major.width":0.5, "xtick.major.size":2,
-    "ytick.major.size":2, "xtick.direction":"out", "ytick.direction":"out",
+    "font.size":5.2, "axes.labelsize":4.8, "axes.titlesize":5.2, "xtick.labelsize":4.5,
+    "ytick.labelsize":4.6, "legend.fontsize":4.2, "axes.linewidth":0.5,
+    "xtick.major.width":0.5, "ytick.major.width":0.5, "xtick.major.size":1.8,
+    "ytick.major.size":1.8, "xtick.direction":"out", "ytick.direction":"out",
     "axes.spines.top":False, "axes.spines.right":False, "savefig.dpi":600,
     "pdf.fonttype":42, "ps.fonttype":42,
 })
 C = dict(blue="#2E5A88", orange="#C46A1B", green="#3A7D44", purple="#7E5A8C",
          grey="#8A8A8A", red="#A63A3A")
 
-def axes_cm(fig, l, b, w=5.0, h=5.0):
+def axes_cm(fig, l, b, w=4.0, h=4.0):
     W, H = fig.get_size_inches() * 2.54
     return fig.add_axes([l/W, b/H, w/W, h/H])
 
 def alabel(ax, letter):
-    ax.text(-0.08, 1.04, letter, transform=ax.transAxes, fontsize=7, fontweight="bold",
+    ax.text(-0.16, 1.03, letter, transform=ax.transAxes, fontsize=6.5, fontweight="bold",
             va="bottom", ha="left", clip_on=False)
 
-def panel(ax, letter, dx=-0.100, dy=0.000):
-    b = ax.get_position()
-    ax.figure.text(b.x0 + dx, b.y1 + dy, letter, fontsize=7, fontweight="bold",
-                   va="bottom", ha="left", clip_on=False)
+def fp(p):
+    if p is None or not np.isfinite(p): return "\u2014"
+    if p < 0.001: return "<0.001"
+    if p < 0.01: return f"{p:.3f}"
+    return f"{p:.2f}"
 
-def forest(ax, rows, xlabel="OR (95% CI)", xlim=(0.45, 3.6), xticks=(0.5, 1, 2, 3)):
+def forest_panel(fig, x0, y0, rows, title, letter, left_cm=1.5,
+                 xlim=(0.45,3.6), xticks=(0.5,1,2,3), xlog=True, null=1.0,
+                 xlabel="OR", header="OR (95% CI)", diff=False, p_x=1.45):
+    ax = axes_cm(fig, x0 + left_cm, y0, 4.0, 4.0)
     ys = np.arange(len(rows))[::-1]
-    for yi, (lab, OR, lo, hi, col, mk) in zip(ys, rows):
-        ax.plot([lo, hi], [yi, yi], color=col, lw=0.9, solid_capstyle="butt", zorder=2)
-        ax.plot(OR, yi, marker=mk, ms=3.6, color=col, mec="white", mew=0.4, zorder=3)
-    ax.axvline(1, color=C["grey"], lw=0.5, ls=(0, (3, 2)), zorder=1)
+    for yi,(lab,OR,lo,hi,col,mk,p) in zip(ys,rows):
+        ax.plot([lo,hi],[yi,yi], color=col, lw=0.9, solid_capstyle="butt", zorder=2)
+        ax.plot(OR, yi, marker=mk, ms=3.2, color=col, mec="white", mew=0.4, zorder=3)
+    ax.axvline(null, color=C["grey"], lw=0.5, ls=(0, (3,2)), zorder=1)
     ax.set_yticks(ys); ax.set_yticklabels([r[0] for r in rows])
-    ax.set_ylim(-0.7, len(rows) - 0.3)
-    ax.set_xscale("log"); ax.set_xlim(*xlim); ax.set_xticks(xticks)
-    ax.xaxis.set_major_formatter(ScalarFormatter()); ax.xaxis.set_minor_formatter(NullFormatter())
-    ax.minorticks_off(); ax.set_xlabel(xlabel, labelpad=2)
+    ax.set_ylim(-0.65, len(rows)-0.35)
+    if xlog:
+        ax.set_xscale("log"); ax.set_xlim(*xlim); ax.set_xticks(xticks)
+        ax.xaxis.set_major_formatter(ScalarFormatter()); ax.xaxis.set_minor_formatter(NullFormatter())
+        ax.minorticks_off()
+    else:
+        ax.set_xlim(*xlim); ax.set_xticks(xticks)
+        ax.xaxis.set_major_formatter(ScalarFormatter()); ax.minorticks_off()
+    ax.set_xlabel(xlabel, labelpad=1.5)
+    ax.set_title(title, pad=2)
+    alabel(ax, letter)
+    tr = mtrans.blended_transform_factory(ax.transAxes, ax.transData)
+    ax.text(1.03, len(rows)-0.30, header, transform=tr, fontsize=3.9, fontweight="bold", va="bottom", ha="left")
+    ax.text(p_x, len(rows)-0.30, "P", transform=tr, fontsize=3.9, fontweight="bold", va="bottom", ha="left")
+    for yi,(lab,OR,lo,hi,col,mk,p) in zip(ys,rows):
+        s = f"{OR:+.3f} ({lo:+.3f}, {hi:+.3f})" if diff else f"{OR:.2f} ({lo:.2f}\u2013{hi:.2f})"
+        ax.text(1.03, yi, s, transform=tr, fontsize=3.9, va="center", ha="left")
+        ax.text(p_x, yi, fp(p), transform=tr, fontsize=3.9, va="center", ha="left")
+    return ax
 
-# ---------------------------------------------------------------- Figure 1 (6.5 x 5 cm)
+# ---------------------------------------------------------------- data
 prim = pd.read_csv(os.path.join(OUT,"sr_nhanes_primary_svyglm.csv"))
 dec  = pd.read_csv(os.path.join(OUT,"sr_cmm3_vs_cmm4.csv"))
 sens = pd.read_csv(os.path.join(OUT,"sr_sensitivity_svyglm.csv"))
 r5   = pd.read_csv(os.path.join(OUT,"sr2_r5_corrected_models.csv"))
-rows_c, rows_a = [], []
-r = prim[(prim.model=="CMM4_total") & (prim.term=="cataract")].iloc[0]; rows_c.append(("CMM4", r.OR, r.lo, r.hi, C["blue"], "o"))
-r = prim[(prim.model=="CMM4_total") & (prim.term=="amd")].iloc[0];     rows_a.append(("CMM4", r.OR, r.lo, r.hi, C["blue"], "o"))
-d = dec[dec.outcome=="cataract"].iloc[0]
-rows_c += [("CMM3", d.CMM3_OR, d.CMM3_lo, d.CMM3_hi, C["green"], "o"),
-           ("Dyslipidaemia", d.dys_OR, d.dys_lo, d.dys_hi, C["purple"], "o")]
-d = dec[dec.outcome=="amd"].iloc[0]
-rows_a += [("CMM3", d.CMM3_OR, d.CMM3_lo, d.CMM3_hi, C["green"], "o"),
-           ("Dyslipidaemia", d.dys_OR, d.dys_lo, d.dys_hi, C["purple"], "o")]
-r = sens[(sens.analysis=="no_obesity_CMM2") & (sens.outcome=="cataract")].iloc[0]
-rows_c.append(("Diabetes+HTN", r.OR, r.lo, r.hi, C["orange"], "o"))
-r = sens[(sens.analysis=="access_adjusted") & (sens.outcome=="cataract")].iloc[0]
-rows_c.append(("CMM3+access", r.OR, r.lo, r.hi, C["grey"], "o"))
-r = sens[(sens.analysis=="access_adjusted") & (sens.outcome=="amd")].iloc[0]
-rows_a.append(("CMM3+access", r.OR, r.lo, r.hi, C["grey"], "o"))
-o = r5[r5.analysis=="amd_obj_any~CMM3_meas"].iloc[0]
-rows_a.append(("Objective AMD", o.OR, o.lo, o.hi, C["red"], "s"))
+coh  = pd.read_csv(os.path.join(OUT,"sr_cohort_cmm3_svyglm.csv"))
+meta = pd.read_csv(os.path.join(OUT,"sr2_meta_audit.csv"))
+strat= pd.read_csv(os.path.join(OUT,"sr_age_strata.csv"))
+boot = pd.read_csv(os.path.join(OUT,"sr2_mediation_boot.csv"))
 
-# two 5 x 5 cm panels, assembled side by side
-fig = plt.figure(figsize=(13.9*CM, 7.0*CM))
-ax = axes_cm(fig, 2.4, 1.3); forest(ax, rows_c); ax.set_title("Cataract surgery", pad=2); alabel(ax, "a")
-ax = axes_cm(fig, 8.5, 1.3); forest(ax, rows_a); ax.set_title("AMD", pad=2); alabel(ax, "b")
+def pget(df, outcome, key="outcome", **kw):
+    d=df
+    for k,v in kw.items(): d=d[d[k]==v]
+    c="outcome" if "outcome" in d.columns else "term"
+    return d[d[c]==outcome].iloc[0]
+def crow(cohort,outcome):
+    r=coh[(coh.cohort==cohort)&(coh.outcome==outcome)].iloc[0]
+    return r.OR,r.lo,r.hi,r.p
+
+# ---------------------------------------------------------------- Figure 1
+r = pget(prim,"cataract",model="CMM4_total"); c4c=(r.OR,r.lo,r.hi,r.p)
+r = pget(prim,"amd",model="CMM4_total");      c4a=(r.OR,r.lo,r.hi,r.p)
+c3c = crow("NHANES","cataract"); c3a = crow("NHANES","amd")
+dc = dec[dec.outcome=="cataract"].iloc[0]; da = dec[dec.outcome=="amd"].iloc[0]
+r = sens[(sens.analysis=="no_obesity_CMM2")&(sens.outcome=="cataract")].iloc[0]; dm=(r.OR,r.lo,r.hi,r.p)
+r = sens[(sens.analysis=="access_adjusted")&(sens.outcome=="cataract")].iloc[0]; acc_c=(r.OR,r.lo,r.hi,r.p)
+r = sens[(sens.analysis=="access_adjusted")&(sens.outcome=="amd")].iloc[0]; acc_a=(r.OR,r.lo,r.hi,r.p)
+o = r5[r5.analysis=="amd_obj_any~CMM3_meas"].iloc[0]; obj=(o.OR,o.lo,o.hi,o.p)
+
+rows_c = [("CMM4",*c4c[:3],C["blue"],"o",c4c[3]),
+          ("CMM3",*c3c[:3],C["green"],"o",c3c[3]),
+          ("Dyslipidaemia",dc.dys_OR,dc.dys_lo,dc.dys_hi,C["purple"],"o",dc.dys_p),
+          ("Diabetes+HTN",*dm[:3],C["orange"],"o",dm[3]),
+          ("CMM3+access",*acc_c[:3],C["grey"],"o",acc_c[3])]
+rows_a = [("CMM4",*c4a[:3],C["blue"],"o",c4a[3]),
+          ("CMM3",*c3a[:3],C["green"],"o",c3a[3]),
+          ("Dyslipidaemia",da.dys_OR,da.dys_lo,da.dys_hi,C["purple"],"o",da.dys_p),
+          ("CMM3+access",*acc_a[:3],C["grey"],"o",acc_a[3]),
+          ("Objective AMD",*obj[:3],C["red"],"s",obj[3])]
+fig = plt.figure(figsize=(15.9*CM, 6.2*CM))
+forest_panel(fig, 0.2, 1.0, rows_c, "Cataract surgery", "a")
+forest_panel(fig, 8.0, 1.0, rows_a, "AMD", "b")
 fig.savefig(os.path.join(FIG,"Fig1_nhanes_forest.png"), dpi=600)
 fig.savefig(os.path.join(FIG,"Fig1_nhanes_forest.pdf")); plt.close(fig); print("Fig1 done")
 
-# ---------------------------------------------------------------- Figure 2 (6.5 x 5 cm, side by side)
+# ---------------------------------------------------------------- Figure 2
 tot = prim[prim.model=="CMM4_total"]; dirn = prim[prim.model=="CMM4_direct_adjCRP"]
-boot = pd.read_csv(os.path.join(OUT,"sr2_mediation_boot_summary.csv"), index_col=0)
-# two 5 x 5 cm panels, assembled side by side
-fig = plt.figure(figsize=(13.4*CM, 7.0*CM))
-ax = axes_cm(fig, 1.8, 1.4)
-xo = np.arange(2); w = 0.32
-vals = {}
-for nm, sub in [("total", tot), ("direct", dirn)]:
-    vals[nm] = dict(OR=[float(sub[sub.term=="cataract"].OR.iloc[0]), float(sub[sub.term=="amd"].OR.iloc[0])],
-                    lo=[float(sub[sub.term=="cataract"].lo.iloc[0]), float(sub[sub.term=="amd"].lo.iloc[0])],
-                    hi=[float(sub[sub.term=="cataract"].hi.iloc[0]), float(sub[sub.term=="amd"].hi.iloc[0])])
-for x, nm, col, off in [(xo-w/2,"total",C["blue"],-1),(xo+w/2,"direct",C["orange"],1)]:
-    v = vals[nm]; err = [np.array(v["OR"])-v["lo"], np.array(v["hi"])-v["OR"]]
-    ax.bar(x, v["OR"], width=w, color=col, edgecolor="none", yerr=err, capsize=1.5,
-           error_kw=dict(elinewidth=0.6, capthick=0.6, ecolor="#333333"))
-ax.axhline(1, color=C["grey"], lw=0.5, ls=(0, (3, 2)))
-ax.set_xticks(xo); ax.set_xticklabels(["Cataract","AMD"]); ax.set_ylabel("CMM4 OR")
-ax.set_ylim(0.85,1.55); ax.set_yticks([0.9,1.0,1.1,1.2,1.3,1.4])
-ax.legend([Patch(color=C["blue"]), Patch(color=C["orange"])], ["Total","CRP-adjusted"], frameon=False,
-          loc="upper left", ncol=1, handlelength=0.8, labelspacing=0.3, borderaxespad=0.1)
-alabel(ax, "a")
-ax = axes_cm(fig, 8.1, 1.4)
-ind = [float(boot.loc["indirect_cataract","est"]), float(boot.loc["indirect_amd","est"])]
-ilo = [float(boot.loc["indirect_cataract","lo"]), float(boot.loc["indirect_amd","lo"])]
-ihi = [float(boot.loc["indirect_cataract","hi"]), float(boot.loc["indirect_amd","hi"])]
-ax.errorbar(ind, [1,0], xerr=[np.array(ind)-ilo, np.array(ihi)-ind], fmt="o", ms=3.6,
-            color=C["red"], elinewidth=0.9, capsize=1.8, mec="white", mew=0.4)
-ax.axvline(0, color=C["grey"], lw=0.5, ls=(0, (3, 2)))
-ax.set_yticks([0,1]); ax.set_yticklabels(["AMD","Cataract"]); ax.set_ylim(-0.6,1.6)
-ax.set_xlim(-0.07,0.05); ax.set_xlabel("Difference in log-odds", labelpad=2)
-ax.xaxis.set_major_formatter(ScalarFormatter()); ax.minorticks_off()
-alabel(ax, "b")
+def pr(sub,term): x=sub[sub.term==term].iloc[0]; return x.OR,x.lo,x.hi,x.p
+ct=pr(tot,"cataract"); ca=pr(tot,"amd"); dt=pr(dirn,"cataract"); da2=pr(dirn,"amd")
+rows2a=[("Cataract total",*ct[:3],C["blue"],"o",ct[3]),
+        ("Cataract CRP-adj.",*dt[:3],C["orange"],"o",dt[3]),
+        ("AMD total",*ca[:3],C["blue"],"o",ca[3]),
+        ("AMD CRP-adj.",*da2[:3],C["orange"],"o",da2[3])]
+ind_c=boot["tot_cat"]-boot["dir_cat"]; ind_a=boot["tot_amd"]-boot["dir_amd"]
+def bp(v):
+    v=v[np.isfinite(v)]; return min(1.0,2*min((v<=0).mean(),(v>=0).mean()))
+ic=(np.mean(ind_c),np.quantile(ind_c,.025),np.quantile(ind_c,.975),bp(ind_c))
+ia=(np.mean(ind_a),np.quantile(ind_a,.025),np.quantile(ind_a,.975),bp(ind_a))
+rows2b=[("Cataract",*ic[:3],C["red"],"o",ic[3]),("AMD",*ia[:3],C["red"],"o",ia[3])]
+fig = plt.figure(figsize=(15.9*CM, 6.2*CM))
+forest_panel(fig, 0.2, 1.0, rows2a, "Total vs CRP-adjusted", "a", left_cm=1.8)
+forest_panel(fig, 8.2, 1.0, rows2b, "Difference", "b", left_cm=1.2,
+             xlim=(-0.07,0.05), xticks=(-0.06,-0.04,-0.02,0.0,0.02,0.04),
+             xlog=False, null=0.0, xlabel="Difference", header="Difference (95% CI)",
+             diff=True, p_x=1.55)
 fig.savefig(os.path.join(FIG,"Fig2_mediation.png"), dpi=600)
 fig.savefig(os.path.join(FIG,"Fig2_mediation.pdf")); plt.close(fig); print("Fig2 done")
 
-# ---------------------------------------------------------------- Figure 3 (6.5 x 5 cm, 2x2 with c spanning)
-coh = pd.read_csv(os.path.join(OUT,"sr_cohort_cmm3_svyglm.csv"))
-meta = pd.read_csv(os.path.join(OUT,"sr2_meta_audit.csv"))
-strat = pd.read_csv(os.path.join(OUT,"sr_age_strata.csv"))
-fig = plt.figure(figsize=(6.5*CM, 5*CM))
-gs = fig.add_gridspec(2, 2, hspace=0.9, wspace=0.75, left=0.215, right=0.97, top=0.92, bottom=0.19)
-for j, outcome in enumerate(["cataract","amd"]):
-    ax = fig.add_subplot(gs[0,j])
-    s = coh[coh.outcome==outcome]; m = meta[meta.outcome==outcome].iloc[0]
-    rows = [("NHANES", float(s[s.cohort=="NHANES"].OR.iloc[0]), float(s[s.cohort=="NHANES"].lo.iloc[0]), float(s[s.cohort=="NHANES"].hi.iloc[0]), C["blue"], "o"),
-            ("NHIS", float(s[s.cohort=="NHIS"].OR.iloc[0]), float(s[s.cohort=="NHIS"].lo.iloc[0]), float(s[s.cohort=="NHIS"].hi.iloc[0]), C["green"], "o"),
-            ("Fixed", float(m.OR_fe), float(m.fe_lo), float(m.fe_hi), C["orange"], "D"),
-            ("Random", float(m.OR_re_hk), float(m.re_lo), float(m.re_hi), C["red"], "D")]
-    forest(ax, rows, xlabel="OR per condition", xlim=(0.45,3.6), xticks=(0.5,1,2))
-    ax.set_title("Cataract surgery" if outcome=="cataract" else "AMD", pad=3)
-    panel(ax, "ab"[j])
-ax = fig.add_subplot(gs[1,:])
-cats = ["40\u201359 / 45\u201359","60\u201369","\u2265 70"]
-yb = np.arange(len(cats))[::-1]
-for k,(cohort,col) in enumerate([("NHANES",C["blue"]),("NHIS",C["green"])]):
-    ss = strat[(strat.cohort==cohort)&(strat.outcome=="cataract")].set_index("agegrp").reindex(["40-59","60-69","70+"])
-    yy = yb + (0.16 if k==0 else -0.16)
-    ax.errorbar(ss.OR, yy, xerr=[ss.OR-ss.lo, ss.hi-ss.OR], fmt="o", ms=3.6, color=col,
-                elinewidth=0.9, capsize=1.8, mec="white", mew=0.4, label=cohort)
-ax.axvline(1, color=C["grey"], lw=0.5, ls=(0,(3,2)))
-ax.set_xscale("log"); ax.set_xlim(0.45,3.6); ax.set_xticks([0.5,1,2,3])
-ax.xaxis.set_major_formatter(ScalarFormatter()); ax.minorticks_off()
-ax.set_yticks(yb); ax.set_yticklabels(cats); ax.set_ylim(-0.75,2.75)
-ax.set_xlabel("OR per condition (95% CI)", labelpad=2)
-ax.legend(frameon=False, loc="lower right", handlelength=0.9, borderaxespad=0.2)
-panel(ax, "c")
+# ---------------------------------------------------------------- Figure 3
+def crows(outcome):
+    rows=[]
+    for name,col in [("NHANES",C["blue"]),("NHIS",C["green"])]:
+        rows.append((name,*crow(name,outcome)[:3],col,"o",crow(name,outcome)[3]))
+    m=meta[meta.outcome==outcome].iloc[0]
+    rows.append(("Fixed",float(m.OR_fe),float(m.fe_lo),float(m.fe_hi),C["orange"],"D",float(m.p_fe)))
+    rows.append(("Random",float(m.OR_re_hk),float(m.re_lo),float(m.re_hi),C["red"],"D",float(m.p_re_hk)))
+    return rows
+rows3a=crows("cataract"); rows3b=crows("amd")
+rows3c=[]
+for age,lab in [("40-59","40/45\u201359"),("60-69","60\u201369"),("70+","\u2265 70")]:
+    for name,col in [("NHANES",C["blue"]),("NHIS",C["green"])]:
+        r=strat[(strat.cohort==name)&(strat.outcome=="cataract")&(strat.agegrp==age)].iloc[0]
+        rows3c.append((f"{lab}, {name}",r.OR,r.lo,r.hi,col,"o",r.p))
+fig = plt.figure(figsize=(15.9*CM, 11.8*CM))
+forest_panel(fig, 0.2, 6.8, rows3a, "Cataract surgery", "a", left_cm=1.4)
+forest_panel(fig, 8.0, 6.8, rows3b, "AMD", "b", left_cm=1.4)
+forest_panel(fig, 3.6, 0.9, rows3c, "By age stratum", "c", left_cm=2.3)
 fig.savefig(os.path.join(FIG,"Fig3_cross_survey.png"), dpi=600)
 fig.savefig(os.path.join(FIG,"Fig3_cross_survey.pdf")); plt.close(fig); print("Fig3 done")
