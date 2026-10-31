@@ -23,6 +23,14 @@ plt.rcParams.update({
 C = dict(blue="#2E5A88", orange="#C46A1B", green="#3A7D44", purple="#7E5A8C",
          grey="#8A8A8A", red="#A63A3A")
 
+def axes_cm(fig, l, b, w=5.0, h=5.0):
+    W, H = fig.get_size_inches() * 2.54
+    return fig.add_axes([l/W, b/H, w/W, h/H])
+
+def alabel(ax, letter):
+    ax.text(-0.08, 1.04, letter, transform=ax.transAxes, fontsize=7, fontweight="bold",
+            va="bottom", ha="left", clip_on=False)
+
 def panel(ax, letter, dx=-0.100, dy=0.000):
     b = ax.get_position()
     ax.figure.text(b.x0 + dx, b.y1 + dy, letter, fontsize=7, fontweight="bold",
@@ -63,19 +71,19 @@ rows_a.append(("CMM3+access", r.OR, r.lo, r.hi, C["grey"], "o"))
 o = r5[r5.analysis=="amd_obj_any~CMM3_meas"].iloc[0]
 rows_a.append(("Objective AMD", o.OR, o.lo, o.hi, C["red"], "s"))
 
-fig = plt.figure(figsize=(6.5*CM, 5*CM))
-gs = fig.add_gridspec(2, 1, hspace=0.85, left=0.34, right=0.97, top=0.93, bottom=0.14)
-ax = fig.add_subplot(gs[0]); forest(ax, rows_c); ax.set_xlabel(""); ax.set_title("Cataract surgery", pad=3); panel(ax, "a")
-ax = fig.add_subplot(gs[1]); forest(ax, rows_a); ax.set_title("AMD", pad=3); panel(ax, "b")
+# two 5 x 5 cm panels, assembled side by side
+fig = plt.figure(figsize=(13.9*CM, 7.0*CM))
+ax = axes_cm(fig, 2.4, 1.3); forest(ax, rows_c); ax.set_title("Cataract surgery", pad=2); alabel(ax, "a")
+ax = axes_cm(fig, 8.5, 1.3); forest(ax, rows_a); ax.set_title("AMD", pad=2); alabel(ax, "b")
 fig.savefig(os.path.join(FIG,"Fig1_nhanes_forest.png"), dpi=600)
 fig.savefig(os.path.join(FIG,"Fig1_nhanes_forest.pdf")); plt.close(fig); print("Fig1 done")
 
-# ---------------------------------------------------------------- Figure 2 (5 x 5 cm, stacked)
+# ---------------------------------------------------------------- Figure 2 (6.5 x 5 cm, side by side)
 tot = prim[prim.model=="CMM4_total"]; dirn = prim[prim.model=="CMM4_direct_adjCRP"]
 boot = pd.read_csv(os.path.join(OUT,"sr2_mediation_boot_summary.csv"), index_col=0)
-fig = plt.figure(figsize=(5*CM, 5*CM))
-gs = fig.add_gridspec(2, 1, height_ratios=[1.05, 1], hspace=0.9, left=0.27, right=0.96, top=0.93, bottom=0.18)
-ax = fig.add_subplot(gs[0])
+# two 5 x 5 cm panels, assembled side by side
+fig = plt.figure(figsize=(13.4*CM, 7.0*CM))
+ax = axes_cm(fig, 1.8, 1.4)
 xo = np.arange(2); w = 0.32
 vals = {}
 for nm, sub in [("total", tot), ("direct", dirn)]:
@@ -90,9 +98,9 @@ ax.axhline(1, color=C["grey"], lw=0.5, ls=(0, (3, 2)))
 ax.set_xticks(xo); ax.set_xticklabels(["Cataract","AMD"]); ax.set_ylabel("CMM4 OR")
 ax.set_ylim(0.85,1.55); ax.set_yticks([0.9,1.0,1.1,1.2,1.3,1.4])
 ax.legend([Patch(color=C["blue"]), Patch(color=C["orange"])], ["Total","CRP-adjusted"], frameon=False,
-          loc="upper center", ncol=2, handlelength=0.8, columnspacing=1.2, borderaxespad=0.1)
-panel(ax, "a")
-ax = fig.add_subplot(gs[1])
+          loc="upper left", ncol=1, handlelength=0.8, labelspacing=0.3, borderaxespad=0.1)
+alabel(ax, "a")
+ax = axes_cm(fig, 8.1, 1.4)
 ind = [float(boot.loc["indirect_cataract","est"]), float(boot.loc["indirect_amd","est"])]
 ilo = [float(boot.loc["indirect_cataract","lo"]), float(boot.loc["indirect_amd","lo"])]
 ihi = [float(boot.loc["indirect_cataract","hi"]), float(boot.loc["indirect_amd","hi"])]
@@ -100,9 +108,9 @@ ax.errorbar(ind, [1,0], xerr=[np.array(ind)-ilo, np.array(ihi)-ind], fmt="o", ms
             color=C["red"], elinewidth=0.9, capsize=1.8, mec="white", mew=0.4)
 ax.axvline(0, color=C["grey"], lw=0.5, ls=(0, (3, 2)))
 ax.set_yticks([0,1]); ax.set_yticklabels(["AMD","Cataract"]); ax.set_ylim(-0.6,1.6)
-ax.set_xlim(-0.07,0.05); ax.set_xlabel("Difference in log-odds\n(total minus CRP-adjusted)", labelpad=2)
+ax.set_xlim(-0.07,0.05); ax.set_xlabel("Difference in log-odds", labelpad=2)
 ax.xaxis.set_major_formatter(ScalarFormatter()); ax.minorticks_off()
-panel(ax, "b")
+alabel(ax, "b")
 fig.savefig(os.path.join(FIG,"Fig2_mediation.png"), dpi=600)
 fig.savefig(os.path.join(FIG,"Fig2_mediation.pdf")); plt.close(fig); print("Fig2 done")
 
