@@ -11,8 +11,8 @@ os.makedirs(FIG, exist_ok=True)
 CM = 1/2.54
 plt.rcParams.update({
     "font.family":"sans-serif", "font.sans-serif":["Arial","Helvetica","DejaVu Sans"],
-    "font.size":5.2, "axes.labelsize":4.8, "axes.titlesize":5.2, "xtick.labelsize":4.5,
-    "ytick.labelsize":4.6, "legend.fontsize":4.2, "axes.linewidth":0.5,
+    "font.size":7.2, "axes.labelsize":6.8, "axes.titlesize":7.2, "xtick.labelsize":6.5,
+    "ytick.labelsize":6.6, "legend.fontsize":6.2, "axes.linewidth":0.5,
     "xtick.major.width":0.5, "ytick.major.width":0.5, "xtick.major.size":1.8,
     "ytick.major.size":1.8, "xtick.direction":"out", "ytick.direction":"out",
     "axes.spines.top":False, "axes.spines.right":False, "savefig.dpi":600,
@@ -26,7 +26,7 @@ def axes_cm(fig, l, b, w=4.0, h=4.0):
     return fig.add_axes([l/W, b/H, w/W, h/H])
 
 def alabel(ax, letter):
-    ax.text(-0.16, 1.03, letter, transform=ax.transAxes, fontsize=6.5, fontweight="bold",
+    ax.text(-0.16, 1.03, letter, transform=ax.transAxes, fontsize=8.5, fontweight="bold",
             va="bottom", ha="left", clip_on=False)
 
 def fp(p):
@@ -37,7 +37,7 @@ def fp(p):
 
 def forest_panel(fig, x0, y0, rows, title, letter, left_cm=1.5,
                  xlim=(0.45,3.6), xticks=(0.5,1,2,3), xlog=True, null=1.0,
-                 xlabel="OR", header="OR (95% CI)", diff=False, p_x=1.45):
+                 xlabel="OR", header="OR (95% CI)", diff=False, p_x=1.55):
     ax = axes_cm(fig, x0 + left_cm, y0, 4.0, 4.0)
     ys = np.arange(len(rows))[::-1]
     for yi,(lab,OR,lo,hi,col,mk,p) in zip(ys,rows):
@@ -57,12 +57,12 @@ def forest_panel(fig, x0, y0, rows, title, letter, left_cm=1.5,
     ax.set_title(title, pad=2)
     alabel(ax, letter)
     tr = mtrans.blended_transform_factory(ax.transAxes, ax.transData)
-    ax.text(1.03, len(rows)-0.30, header, transform=tr, fontsize=3.9, fontweight="bold", va="bottom", ha="left")
-    ax.text(p_x, len(rows)-0.30, "P", transform=tr, fontsize=3.9, fontweight="bold", va="bottom", ha="left")
+    ax.text(1.03, len(rows)-0.30, header, transform=tr, fontsize=5.9, fontweight="bold", va="bottom", ha="left")
+    ax.text(p_x, len(rows)-0.30, "P", transform=tr, fontsize=5.9, fontweight="bold", va="bottom", ha="left")
     for yi,(lab,OR,lo,hi,col,mk,p) in zip(ys,rows):
         s = f"{OR:+.3f} ({lo:+.3f}, {hi:+.3f})" if diff else f"{OR:.2f} ({lo:.2f}\u2013{hi:.2f})"
-        ax.text(1.03, yi, s, transform=tr, fontsize=3.9, va="center", ha="left")
-        ax.text(p_x, yi, fp(p), transform=tr, fontsize=3.9, va="center", ha="left")
+        ax.text(1.03, yi, s, transform=tr, fontsize=5.9, va="center", ha="left")
+        ax.text(p_x, yi, fp(p), transform=tr, fontsize=5.9, va="center", ha="left")
     return ax
 
 # ---------------------------------------------------------------- data
@@ -104,11 +104,11 @@ rows_a = [("CMM4",*c4a[:3],C["blue"],"o",c4a[3]),
           ("Dyslipidaemia",da.dys_OR,da.dys_lo,da.dys_hi,C["purple"],"o",da.dys_p),
           ("CMM3+access",*acc_a[:3],C["grey"],"o",acc_a[3]),
           ("Objective AMD",*obj[:3],C["red"],"s",obj[3])]
-fig = plt.figure(figsize=(15.9*CM, 6.2*CM))
-forest_panel(fig, 0.2, 1.0, rows_c, "Cataract surgery", "a")
-forest_panel(fig, 8.0, 1.0, rows_a, "AMD", "b")
-fig.savefig(os.path.join(FIG,"Fig1_nhanes_forest.png"), dpi=600)
-fig.savefig(os.path.join(FIG,"Fig1_nhanes_forest.pdf")); plt.close(fig); print("Fig1 done")
+fig = plt.figure(figsize=(17.3*CM, 6.8*CM))
+forest_panel(fig, 0.2, 1.2, rows_c, "Cataract surgery", "a", left_cm=1.8)
+forest_panel(fig, 8.8, 1.2, rows_a, "AMD", "b", left_cm=1.8)
+fig.savefig(os.path.join(FIG,"Fig1_nhanes_forest.png"), dpi=600, bbox_inches="tight", pad_inches=0.02)
+fig.savefig(os.path.join(FIG,"Fig1_nhanes_forest.pdf"), bbox_inches="tight", pad_inches=0.02); plt.close(fig); print("Fig1 done")
 
 # ---------------------------------------------------------------- Figure 2
 tot = prim[prim.model=="CMM4_total"]; dirn = prim[prim.model=="CMM4_direct_adjCRP"]
@@ -124,14 +124,14 @@ def bp(v):
 ic=(np.mean(ind_c),np.quantile(ind_c,.025),np.quantile(ind_c,.975),bp(ind_c))
 ia=(np.mean(ind_a),np.quantile(ind_a,.025),np.quantile(ind_a,.975),bp(ind_a))
 rows2b=[("Cataract",*ic[:3],C["red"],"o",ic[3]),("AMD",*ia[:3],C["red"],"o",ia[3])]
-fig = plt.figure(figsize=(15.9*CM, 6.2*CM))
-forest_panel(fig, 0.2, 1.0, rows2a, "Total vs CRP-adjusted", "a", left_cm=1.8)
-forest_panel(fig, 8.2, 1.0, rows2b, "Difference", "b", left_cm=1.2,
+fig = plt.figure(figsize=(17.4*CM, 6.8*CM))
+forest_panel(fig, 0.2, 1.2, rows2a, "Total vs CRP-adjusted", "a", left_cm=2.1)
+forest_panel(fig, 9.0, 1.2, rows2b, "Difference", "b", left_cm=1.5,
              xlim=(-0.07,0.05), xticks=(-0.06,-0.04,-0.02,0.0,0.02,0.04),
              xlog=False, null=0.0, xlabel="Difference", header="Difference (95% CI)",
-             diff=True, p_x=1.55)
-fig.savefig(os.path.join(FIG,"Fig2_mediation.png"), dpi=600)
-fig.savefig(os.path.join(FIG,"Fig2_mediation.pdf")); plt.close(fig); print("Fig2 done")
+             diff=True, p_x=1.68)
+fig.savefig(os.path.join(FIG,"Fig2_mediation.png"), dpi=600, bbox_inches="tight", pad_inches=0.02)
+fig.savefig(os.path.join(FIG,"Fig2_mediation.pdf"), bbox_inches="tight", pad_inches=0.02); plt.close(fig); print("Fig2 done")
 
 # ---------------------------------------------------------------- Figure 3
 def crows(outcome):
@@ -148,9 +148,9 @@ for age,lab in [("40-59","40/45\u201359"),("60-69","60\u201369"),("70+","\u2265 
     for name,col in [("NHANES",C["blue"]),("NHIS",C["green"])]:
         r=strat[(strat.cohort==name)&(strat.outcome=="cataract")&(strat.agegrp==age)].iloc[0]
         rows3c.append((f"{lab}, {name}",r.OR,r.lo,r.hi,col,"o",r.p))
-fig = plt.figure(figsize=(15.9*CM, 11.8*CM))
-forest_panel(fig, 0.2, 6.8, rows3a, "Cataract surgery", "a", left_cm=1.4)
-forest_panel(fig, 8.0, 6.8, rows3b, "AMD", "b", left_cm=1.4)
-forest_panel(fig, 3.6, 0.9, rows3c, "By age stratum", "c", left_cm=2.3)
-fig.savefig(os.path.join(FIG,"Fig3_cross_survey.png"), dpi=600)
-fig.savefig(os.path.join(FIG,"Fig3_cross_survey.pdf")); plt.close(fig); print("Fig3 done")
+fig = plt.figure(figsize=(17.2*CM, 12.6*CM))
+forest_panel(fig, 0.2, 7.2, rows3a, "Cataract surgery", "a", left_cm=1.7)
+forest_panel(fig, 8.7, 7.2, rows3b, "AMD", "b", left_cm=1.7)
+forest_panel(fig, 3.8, 0.9, rows3c, "By age stratum", "c", left_cm=2.9)
+fig.savefig(os.path.join(FIG,"Fig3_cross_survey.png"), dpi=600, bbox_inches="tight", pad_inches=0.02)
+fig.savefig(os.path.join(FIG,"Fig3_cross_survey.pdf"), bbox_inches="tight", pad_inches=0.02); plt.close(fig); print("Fig3 done")
