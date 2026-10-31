@@ -77,7 +77,7 @@ A detailed map is in `docs/Supplementary_audit.md` (Section S-A). In brief:
 
 If you use this code, please cite the manuscript and this repository:
 
-> Huang J, Wang J. Cardiometabolic multimorbidity and age-related eye disease: cross-sectional analyses of two US national surveys. GitHub repository, version v1.0.0. https://github.com/teamhuang/cmm-eye-nhanes-nhis
+> Huang J, Wang J. Cardiometabolic multimorbidity and age-related eye disease: cross-sectional analyses of two US national surveys. GitHub repository, version v1.0.1. https://github.com/teamhuang/cmm-eye-nhanes-nhis
 
 A versioned archive DOI (Zenodo) will be added if required by the journal.
 
